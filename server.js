@@ -7,6 +7,20 @@ const badwords = require('./modules/badWords');
 const path = require('path');
 const PUBLIC_DIR = path.join(__dirname, 'public');
 
+const mimeTypes = {
+    ".html": "text/html",
+    ".js": "application/javascript",
+    ".css": "text/css",
+    ".json": "application/json",
+    ".png": "image/png",
+    ".jpg": "image/jpeg",
+    ".jpeg": "image/jpeg",
+    ".gif": "image/gif",
+    ".svg": "image/svg+xml",
+    ".ico": "image/x-icon",
+    ".wav": "audio/wav"
+};
+
 let log = new Logger();
 
 class Server {
@@ -527,9 +541,13 @@ class Server {
                 return;
             }
 
-            res.writeHead(200);
+            const ext = path.extname(filePath);
+            const contentType = mimeTypes[ext] || "application/octet-stream";
+
+            res.writeHead(200, { "Content-Type": contentType });
             res.end(data);
-                });
+        });
+
 
             });
         });

@@ -1,4 +1,5 @@
-const server = new WebSocket(`ws://${location.host}/ws`);
+const protocol = location.protocol === 'https:' ? 'wss:' : 'ws:';
+const server = new WebSocket(`${protocol}//${location.host}/ws`);
 const user = {}, room = {
     players: []
 };
