@@ -5,6 +5,7 @@ const PlayerCommands = require('./modules/commands/player');
 const config = require('./config');
 const badwords = require('./modules/badWords');
 const path = require('path');
+const PUBLIC_DIR = path.join(__dirname, 'public');
 
 let log = new Logger();
 
@@ -15,10 +16,8 @@ class Server {
 
         log.info("Version:\x1b[32m", this.version, '\x1b[0m');
 
-        if(!this.config.port || isNaN(this.config.port)) { // port validation
-            log.warn("Port is missing in the settings or is invalid!");
-            this.config.port = 9090; 
-        };
+        this.config.port = process.env.PORT || this.config.port || 9090;
+
         this.http = require('http').createServer();
         this.server = new WebSocket.Server({ path: '/ws', server: this.http });
         this.rooms = new Map();
@@ -499,22 +498,46 @@ class Server {
         log.debug("Debug Mode:", "ON");
 
         this.http.on('request', (req, res) => {
-            if (req.url === '/') {
-                res.writeHead(200, { 'Content-Type': 'text/html' });
-                res.end(fs.readFileSync('./public/index.html'));
-                return;
-            }
 
-            if (fs.existsSync(path.join('./public', req.url))) {
-                res.end(fs.readFileSync(path.join('./public', req.url)));
-                return;
-            } else {
+    let requestPath = req.url.split('?')[0];
+
+    if (requestPath === '/') {
+        requestPath = '/index.html';
+    }
+
+    let filePath = path.join(PUBLIC_DIR, requestPath);
+
+    fs.stat(filePath, (err, stats) => {
+
+        if (err) {
+            res.writeHead(404);
+            res.end('Not Found');
+            return;
+        }
+
+        // If directory → open index.html inside it
+        if (stats.isDirectory()) {
+            filePath = path.join(filePath, 'index.html');
+        }
+
+        fs.readFile(filePath, (err, data) => {
+            if (err) {
                 res.writeHead(404);
                 res.end('Not Found');
+                return;
             }
+
+            res.writeHead(200);
+            res.end(data);
+                });
+
+            });
         });
 
-        this.http.listen(this.config.port);
+
+        this.http.listen(this.config.port, '0.0.0.0', () => {
+            log.info("Listening on", this.config.port);
+        });
 
         this.server.on('connection', socket => {
             if(this.config.max_connections && this.server.clients.size > this.config.max_connections)
